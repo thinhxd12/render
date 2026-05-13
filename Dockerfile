@@ -1,5 +1,4 @@
-# Pull the official, pre-configured Microsoft Playwright Python base image
-FROM microsoft.com
+FROM mcr.microsoft.com/playwright:v1.52.0-noble
 
 WORKDIR /app
 
