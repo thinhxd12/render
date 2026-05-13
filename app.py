@@ -73,3 +73,8 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
         # Instantly close only the tab context, leaving the global browser running
         await context.close()
 
+@app.get("/healthz")
+def health_check():
+    """Lightweight endpoint for keep-alive pings"""
+    return {"status": "healthy", "browser_live": global_browser is not None}
+
