@@ -35,18 +35,18 @@ def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_header))
         response.raise_for_status()
         
         tree = HTMLParser(response.text)
-        data = []
+        # data = []
         
-        for node in tree.css("a")[:15]:
-            href = node.attributes.get("href", "")
-            text = node.text(strip=True)
-            if href and text:
-                data.append({
-                    "title": text,
-                    "url": href
-                })
+        # for node in tree.css('tr[itemtype="http://schema.org/Book"]')[:15]:
+        #     href = node.attributes.get("href", "")
+        #     text = node.text(strip=True)
+        #     if href and text:
+        #         data.append({
+        #             "title": text,
+        #             "url": href
+        #         })
             
-        return {"success": True, "target": target_url, "data": data}
+        return {"success": True, "target": target_url, "data": tree}
         
     except Exception as e:
         return {"success": False, "error": str(e)}
