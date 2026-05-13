@@ -3,7 +3,6 @@ from fastapi import FastAPI, HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
-# Import the browser-impersonating requests engine
 from curl_cffi import requests
 
 app = FastAPI()
@@ -30,18 +29,25 @@ def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_header))
     try:
         target_url = str(request.url)
         
-        # 'impersonate="chrome"' fakes the TLS JA3/JA4 fingerprint at the network layer
-        response = requests.get(
-            target_url, 
-            impersonate="chrome", 
-            timeout=15
-        )
-        response.raise_for_status()
-        
-        # Cleanly captures raw source HTML bypassing the 202 blocker page
-        raw_html = response.text
-        
-        return {"success": True, "target": target_url, "html": raw_html}
+        # Initialize a persistent Session to maintain automated state and cookies
+        with requests.Session() as session:
+            
+            response = session.get(
+                target_url, 
+                impersonate="chrome", 
+                allow_redirects=True, # Explicitly follow 301/302 redirect locations
+                max_redirects=10,     # Stop infinite redirect loops gracefully
+                timeout=20
+            )
+            response.raise_for_status()
+            
+            
+            return {
+                "success": True, 
+                "target": target_url, 
+                "final_url": response.url, # Returns the actual destination URL
+                "html": response.text      # Captures destination source content
+            }
         
     except Exception as e:
-        return {"success": False, "error": f"Scrape execution failed: {str(e)}"}
+        return {"success": False, "error": f"Redirection capture failed: {str(e)}"}
