@@ -1,4 +1,4 @@
-requests==2.32.3
-selectolax==0.3.27
+curl_cffi==0.7.4
 fastapi==0.115.0
 uvicorn==0.30.0
+pydantic==2.8.2
