@@ -45,14 +45,18 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
         
         page = await context.new_page()
         
-        try:
-            # Navigate and wait up to 30 seconds for network requests to finish settling
-            await page.goto(target_url, wait_until="networkidle", timeout=30000)
+            try:
+            # 1. Initial navigation (wait until DOM content is loaded at minimum)
+            await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
             
-            # (Optional fallback) Wait an explicit 2 seconds to let late client scripts render
-            await asyncio.sleep(2)
+            # 2. Force Playwright to wait until all secondary JS redirects clear
+            # and the network goes completely quiet for at least 500ms.
+            await page.wait_for_load_state("networkidle", timeout=15000)
             
-            # Extract the live DOM state (including JavaScript injected elements)
+            # 3. Double Check: Ensure any background loaders or AJAX mutations finish
+            await page.wait_for_timeout(3000)
+            
+            # 4. Read the stable final HTML state safely
             raw_html = await page.content()
             
             return {
@@ -62,7 +66,14 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
             }
             
         except Exception as e:
-            return {"success": False, "error": f"Playwright engine crash: {str(e)}"}
+            # Fallback mitigation: If networkidle times out but the page is still viewable,
+            # try to grab whatever DOM content exists as a final safety net.
+            try:
+                raw_html = await page.content()
+                return {"success": True, "target": target_url, "html": raw_html, "warning": "Partial fetch"}
+            except:
+                return {"success": False, "error": f"Playwright engine crash: {str(e)}"}
+ 
         finally:
             # Safely close context allocations to prevent ghost processes and memory leaks
             await context.close()
