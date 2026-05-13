@@ -6,9 +6,6 @@ WORKDIR /app
 # Copy your dependency requirements manifest
 COPY requirements.txt .
 
-# Upgrade package installers and compile your Python requirements
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
 
 # The Python base image already includes the core browser binaries natively.
 # We just call install to verify version bindings remain structurally healthy.
