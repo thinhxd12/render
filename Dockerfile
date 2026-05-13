@@ -1,5 +1,5 @@
 # FIX: Use the explicit Python variant of the Microsoft image
-FROM microsoft.com
+FROM mcr.microsoft.com/playwright:v1.50.0-noble 
 
 WORKDIR /app
 
