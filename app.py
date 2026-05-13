@@ -45,6 +45,11 @@ async def shutdown_event():
     if playwright_manager:
         await playwright_manager.stop()
 
+@app.get("/healthz")
+def health_check():
+    """Lightweight endpoint for keep-alive pings"""
+    return {"status": "healthy", "browser_live": global_browser is not None}
+
 @app.post("/api/scrape")
 async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_header)):
     if api_key != API_KEY:
@@ -61,8 +66,8 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
     
     try:
         # Perform dynamic scraping
-        await page.goto(target_url, wait_until="domcontentloaded", timeout=25000)
-        await page.wait_for_load_state("networkidle", timeout=10000)
+        await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_load_state("networkidle", timeout=30000)
         
         raw_html = await page.content()
         return {"success": True, "target": target_url, "html": raw_html}
@@ -73,8 +78,5 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
         # Instantly close only the tab context, leaving the global browser running
         await context.close()
 
-@app.get("/healthz")
-def health_check():
-    """Lightweight endpoint for keep-alive pings"""
-    return {"status": "healthy", "browser_live": global_browser is not None}
+
 
