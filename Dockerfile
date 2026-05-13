@@ -1,4 +1,5 @@
-FROM mcr.microsoft.com/playwright:v1.52.0-noble
+# FIX: Use the explicit Python variant of the Microsoft image
+FROM microsoft.com
 
 WORKDIR /app
 
@@ -9,8 +10,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
-# The Microsoft image already includes the core browser bundles natively,
-# but we run the installer to link configuration versions perfectly.
+# The Python base image already includes the core browser binaries natively.
+# We just call install to verify version bindings remain structurally healthy.
 RUN playwright install chromium
 
 # Copy your application script code 
