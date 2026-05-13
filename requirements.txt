@@ -1,2 +1,4 @@
-Flask
-Gunicorn
+requests==2.32.3
+selectolax==0.3.27
+fastapi==0.115.0
+uvicorn==0.30.0
