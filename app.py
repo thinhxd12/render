@@ -39,19 +39,19 @@ def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_header))
         response = requests.get(target_url, headers=headers, timeout=10)
         response.raise_for_status()
         
-        # tree = HTMLParser(response.text)
-        # data = []
+        tree = HTMLParser(response.text)
+        data = []
         
-        # for node in tree.css('tr[itemtype="http://schema.org/Book"]')[:15]:
-        #     href = node.attributes.get("href", "")
-        #     text = node.text(strip=True)
-        #     if href and text:
-        #         data.append({
-        #             "title": text,
-        #             "url": href
-        #         })
+        for node in tree.css('tr[itemtype="http://schema.org/Book"]')[:15]:
+            href = node.attributes.get("href", "")
+            text = node.text(strip=True)
+            if href and text:
+                data.append({
+                    "title": text,
+                    "url": href
+                })
             
-        return {"success": True, "target": target_url, "data": response.text}
+        return {"success": True, "target": target_url, "data": data}
         
     except Exception as e:
         return {"success": False, "error": str(e)}
