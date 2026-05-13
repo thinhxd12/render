@@ -1,22 +1,23 @@
-# FIX: Use the explicit Python variant of the Microsoft image
-FROM mcr.microsoft.com/playwright:v1.50.0-noble 
+# Use the full Python image (contains all native development package binaries)
+FROM python:3.11-bookworm
 
 WORKDIR /app
 
-# Copy your dependency requirements manifest
+# Copy your python dependencies file
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
-# The Python base image already includes the core browser binaries natively.
-# We just call install to verify version bindings remain structurally healthy.
-RUN playwright install 
+# Upgrade package managers and install your project requirements
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
 
-RUN playwright install-dep
+# Crucial: --with-deps automatically downloads the exact Linux system OS
+# libraries and font frameworks that Playwright needs, skipping manual apt-get.
+RUN playwright install chromium --with-deps
 
-# Copy your application script code 
+# Copy your FastAPI app code into the container
 COPY app.py .
 
 EXPOSE 8000
 
-# Start your web crawler server interface
+# Start your web scraper endpoint
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
