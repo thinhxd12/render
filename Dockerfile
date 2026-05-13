@@ -6,10 +6,12 @@ WORKDIR /app
 # Copy your dependency requirements manifest
 COPY requirements.txt .
 
-
+RUN pip install --no-cache-dir -r requirements.txt
 # The Python base image already includes the core browser binaries natively.
 # We just call install to verify version bindings remain structurally healthy.
-RUN playwright install chromium
+RUN playwright install 
+
+RUN playwright install-dep
 
 # Copy your application script code 
 COPY app.py .
