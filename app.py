@@ -45,7 +45,7 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
         
         page = await context.new_page()
         
-            try:
+        try:
             # 1. Initial navigation (wait until DOM content is loaded at minimum)
             await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
             
