@@ -11,18 +11,18 @@ app = FastAPI()
 API_KEY = os.environ.get("SCRAPER_SECRET_KEY", "my_fallback_secret_key")
 api_key_header = APIKeyHeader(name="X-Scraper-Key", auto_error=True)
 
-# origins = [
-#     "http://localhost:5173",     
-#     "vocabs1.vercel.app"
-# ]
+origins = [
+    "http://localhost:5173",     
+    "vocabs1.vercel.app"
+]
 
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["POST", "GET", "OPTIONS"],
-#     allow_headers=["Content-Type", "X-Scraper-Key"],
-# )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Scraper-Key"],
+)
 
 class ScrapeRequest(BaseModel):
     url: HttpUrl
@@ -39,7 +39,7 @@ def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_header))
         response = requests.get(target_url, headers=headers, timeout=10)
         response.raise_for_status()
         
-        tree = HTMLParser(response.text)
+        # tree = HTMLParser(response.text)
         # data = []
         
         # for node in tree.css('tr[itemtype="http://schema.org/Book"]')[:15]:
@@ -51,7 +51,7 @@ def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_header))
         #             "url": href
         #         })
             
-        return {"success": True, "target": target_url, "data": tree}
+        return {"success": True, "target": target_url, "data": response.text}
         
     except Exception as e:
         return {"success": False, "error": str(e)}
