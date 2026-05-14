@@ -19,46 +19,65 @@ app.add_middleware(
 class CrawlRequest(BaseModel):
     url: str
 
+# Global persistent instances
+global_crawler = None
+
+# MATCH FIRECRAWL SPEED: Configure the browser infrastructure
 browser_config = BrowserConfig(
     headless=True,
-    # avoid_ads=True,
-    # avoid_css=True, 
-    # memory_saving_mode=True,          # Aggressive cache/V8 heap flags
-    # max_pages_before_recycle=100,     # Auto-restart browser after N pages
-    # extra_args=[
-    #     "--disable-gpu",
-    #     "--no-sandbox",
-    #     "--disable-dev-shm-usage",
-    #     "--disable-setuid-sandbox",
-    #     "--blink-settings=imagesEnabled=false" # Chromium level image disabling
-    # ]
+    # OPTION A: If you have a proxy provider (Smartproxy, Oxylabs, Bright Data), add it here.
+    # This prevents Render data-center IPs from being throttled by Cloudflare.
+    # proxy="http://username:password@proxy_host:port", 
+    extra_args=[
+        "--disable-gpu",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--blink-settings=imagesEnabled=false" # Stops the browser from requesting images
+    ]
 )
 
+# MATCH FIRECRAWL SPEED: Optimize the execution strategy
 run_config = CrawlerRunConfig(
-    cache_mode=1, # Re-use page layout states if duplicate crawls occur
-    # wait_until="commit", # "commit" stops tracking as soon as HTML is delivered (faster than "networkidle")
-    # scraping_strategy=WebScrapingStrategy()
+    # 1. Skip JavaScript rendering if you just need content from standard sites
+    # Set to True only if target pages require JS/React/Vue initialization
+    magic_mode=False, 
+    
+    # 2. Firecrawl speed target: Cut the connection as soon as HTML hits the DOM.
+    # "commit" stops execution instantly without waiting for analytics/trackers.
+    wait_until="commit", 
+    
+    # 3. Bypass third-party tracking scripts entirely
+    exclude_external_links=True,
+    
+    # 4. Use memory cache for repeated layout patterns
+    cache_mode=1
 )
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+@app.on_event("startup")
+async def startup_event():
+    global global_crawler
+    global_crawler = AsyncWebCrawler(config=browser_config)
+    await global_crawler.__aenter__() # Keeps the browser pool warm and running 24/7
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global global_crawler
+    if global_crawler:
+        await global_crawler.__aexit__(None, None, None)
 
 @app.post("/crawl")
 async def crawl_url(payload: CrawlRequest):
     try:
-        # Pass the memory-optimized configs into the crawler context
-        async with AsyncWebCrawler(config=browser_config) as crawler:
-            result = await crawler.arun(url=payload.url, config=run_config)
+        # Pull data using the warm browser pool and commit-immediate strategy
+        result = await global_crawler.arun(url=payload.url, config=run_config)
+        
+        if not result.success:
+            raise HTTPException(status_code=500, detail="Crawl operation timed out or failed")
             
-            if not result.success:
-                raise HTTPException(status_code=500, detail="Crawl failed")
-                
-            return {
-                "success": True,
-                "markdown": result.markdown,
-                "html": result.html
-            }
+        return {
+            "success": True,
+            "markdown": result.markdown
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
