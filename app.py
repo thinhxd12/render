@@ -80,7 +80,6 @@ async def crawl_url(payload: CrawlRequest):
             return {
                 "success": True,
                 "html": result.html,
-                "results": result,
                 "cleaned": result.cleaned_html
             }
     except Exception as e:
