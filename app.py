@@ -109,8 +109,8 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
 
     try:
         page.route("**/*", intercept_route)
-        await page.goto(target_url, wait_until="domcontentloaded")
-        await page.wait_for_load_state("domcontentloaded")
+        await page.goto(target_url, wait_until="commit")
+        await page.wait_for_load_state("load")
         
         raw_html = await page.content()
         return {"success": True, "target": target_url, "html": raw_html}
