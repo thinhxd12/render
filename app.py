@@ -23,7 +23,6 @@ browser_config = BrowserConfig(
     headless=True,
     avoid_ads=True,
     avoid_css=True, 
-    remove_consent_popups=True,
     memory_saving_mode=True,          # Aggressive cache/V8 heap flags
     max_pages_before_recycle=100,     # Auto-restart browser after N pages
     exclude_all_images=True,
