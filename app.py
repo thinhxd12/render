@@ -1,7 +1,7 @@
 import os
 import asyncio
-from datetime import datetime
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Security
+from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode, WebScrapingStrategy
@@ -56,7 +56,8 @@ run_config = CrawlerRunConfig(
     page_timeout=10000,
     wait_until="commit", 
     exclude_external_links=True,
-    cache_mode=1
+    cache_mode=1,
+    prefetch=True
 )
 
 @app.on_event("startup")
