@@ -31,9 +31,7 @@ browser_config = BrowserConfig(
         "--disable-dev-shm-usage",
         "--disable-setuid-sandbox",
         "--blink-settings=imagesEnabled=false" # Chromium level image disabling
-    ],
-    exclude_external_links=True,    # Remove external links
-    remove_overlay_elements=True
+    ]
 )
 
 run_config = CrawlerRunConfig(
