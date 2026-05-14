@@ -1,11 +1,20 @@
 import os
 import asyncio
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 # 1. Import configuration modules to control the browser behavior
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
 app = FastAPI(title="Crawl4AI Optimized Low-RAM API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class CrawlRequest(BaseModel):
     url: str
