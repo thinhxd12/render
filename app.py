@@ -37,7 +37,6 @@ run_config = CrawlerRunConfig(
     cache_mode=1, # Re-use page layout states if duplicate crawls occur
     wait_until="commit", # "commit" stops tracking as soon as HTML is delivered (faster than "networkidle")
     scraping_strategy=LXMLWebScrapingStrategy(),
-    cache_mode=CacheMode.ENABLED,
 )
 
 @app.get("/health")
