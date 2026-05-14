@@ -4,8 +4,7 @@ from fastapi import FastAPI, HTTPException, Security, Depends, status
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
-from crawl4ai.extraction_strategy import LXMLWebScrapingStrategy
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMod, WebScrapingStrategye
 
 app = FastAPI(title="Crawl4AI Optimized Low-RAM API")
 
@@ -54,7 +53,7 @@ browser_config = BrowserConfig(
 
 # MATCH FIRECRAWL SPEED: Optimize the execution strategy
 run_config = CrawlerRunConfig(
-    scraping_strategy=LXMLWebScrapingStrategy(),
+    scraping_strategy=WebScrapingStrategy(),
     excluded_tags=["nav", "footer", "header", "aside", "script", "style"],
     page_timeout=10000,
     wait_until="domcontentloaded",
