@@ -8,6 +8,23 @@ from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
 
 app = FastAPI(title="Crawl4AI Optimized Low-RAM API")
 
+API_KEY = os.environ.get("SCRAPER_SECRET_KEY", "my_fallback_secret_key")
+api_key_header = APIKeyHeader(name="X-Scraper-Key", auto_error=True)
+
+async def validate_api_key(api_key_header_value: str = Depends(api_key_header)):
+    """
+    Validates the incoming SCRAPER_SECRET_KEY header against the configured environment secret.
+    """
+    if not api_key_header_value or api_key_header_value != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing API Key"
+        )
+    return api_key_header_value
+
+class CrawlRequest(BaseModel):
+    url: str
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -54,7 +71,7 @@ async def shutdown_event():
     if global_crawler:
         await global_crawler.__aexit__(None, None, None)
 
-@app.post("/crawl")
+@app.post("/crawl", dependencies=[Depends(validate_api_key)])
 async def crawl_url(payload: CrawlRequest):
     try:
         # Pull data using the warm browser pool and commit-immediate strategy
