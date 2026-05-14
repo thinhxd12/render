@@ -12,7 +12,6 @@ from crawl4ai import (
     WebScrapingStrategy,
 )
 
-app = FastAPI(title="Crawl4AI Optimized Low-RAM API")
 
 API_KEY = os.environ.get("SCRAPER_SECRET_KEY", "my_fallback_secret_key")
 api_key_header = APIKeyHeader(name="X-Scraper-Key", auto_error=True)
@@ -42,38 +41,50 @@ app.add_middleware(
 )
 
 
-class CrawlRequest(BaseModel):
-    url: str
+# 1. Define global state storage
+state = {}
+
+# 2. Modern Lifespan Event Handler
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Manages the persistent lifecycle of the Crawl4AI browser pool.
+    Replaces the deprecated @app.on_event hooks.
+    """
+    browser_config = BrowserConfig(
+        headless=True,
+        light_mode=True,
+        extra_args=[
+            "--disable-gpu",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--blink-settings=imagesEnabled=false",  # Stops the browser from requesting images
+        ],
+    )
+
+    crawler = AsyncWebCrawler(config=browser_config)
+    await crawler.__aenter__()
+
+    # Store the running instance in the state dictionary
+    state["crawler"] = crawler
+    state["run_config"] = CrawlerRunConfig(
+        scraping_strategy=WebScrapingStrategy(),
+        excluded_tags=["footer", "header", "style", "script"],
+        css_selector=".tableList",
+        wait_until="commit",
+        exclude_external_links=True,
+        cache_mode=1,
+        prefetch=True,
+    )
+
+    yield  # The FastAPI server runs and handles traffic while frozen here
+
+    # [SHUTDOWN]: Safely close browser processes when the container stops
+    if "crawler" in state:
+        await state["crawler"].__aexit__(None, None, None)
 
 
-# Global persistent instances
-global_crawler = None
-
-# MATCH FIRECRAWL SPEED: Configure the browser infrastructure
-browser_config = BrowserConfig(
-    headless=True,
-    light_mode=True,
-    extra_args=[
-        "--disable-gpu",
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        "--blink-settings=imagesEnabled=false",  # Stops the browser from requesting images
-    ],
-)
-
-
-@app.on_event("startup")
-async def startup_event():
-    global global_crawler
-    global_crawler = AsyncWebCrawler(config=browser_config)
-    await global_crawler.__aenter__()  # Keeps the browser pool warm and running 24/7
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    global global_crawler
-    if global_crawler:
-        await global_crawler.__aexit__(None, None, None)
+app = FastAPI(title="Modern Crawl4AI API", lifespan=lifespan)
 
 
 @app.get("/healthz")
@@ -82,19 +93,12 @@ def health_check():
     return {"status": "healthy"}
 
 
-@app.post("/crawl", dependencies=[Depends(validate_api_key)])
+@app.post("/crawlbook", dependencies=[Depends(validate_api_key)])
 async def crawl_url(payload: CrawlRequest):
     try:
-        run_config = CrawlerRunConfig(
-            scraping_strategy=WebScrapingStrategy(),
-            excluded_tags=["footer", "header", "style", "script"],
-            css_selector=payload.className,
-            wait_until="commit",
-            exclude_external_links=True,
-            cache_mode=1,
-            prefetch=True,
-        )
-        result = await global_crawler.arun(url=payload.url, config=run_config)
+        crawler = state["crawler"]
+        run_config = state["run_config"]
+        result = await crawler.arun(url=payload.url, config=run_config)
 
         if not result.success:
             raise HTTPException(
