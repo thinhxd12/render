@@ -1,6 +1,5 @@
 import os
-import asyncio
-from fastapi import FastAPI, HTTPException, Security, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
@@ -8,10 +7,9 @@ from crawl4ai import (
     AsyncWebCrawler,
     BrowserConfig,
     CrawlerRunConfig,
-    CacheMode,
     WebScrapingStrategy,
 )
-
+from contextlib import asynccontextmanager
 
 API_KEY = os.environ.get("SCRAPER_SECRET_KEY", "my_fallback_secret_key")
 api_key_header = APIKeyHeader(name="X-Scraper-Key", auto_error=True)
@@ -30,16 +28,6 @@ async def validate_api_key(api_key_header_value: str = Depends(api_key_header)):
 
 class CrawlRequest(BaseModel):
     url: HttpUrl
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 # 1. Define global state storage
 state = {}
@@ -86,6 +74,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Modern Crawl4AI API", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/healthz")
 def health_check():
