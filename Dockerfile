@@ -1,23 +1,29 @@
-# Use the full Python image (contains all native development package binaries)
-FROM python:3.11-bookworm
+FROM python:3.11-slim
+
+# Prevent Python from writing pyc files and buffering stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Copy your python dependencies file
+# Install system dependencies needed for Playwright/Chromium
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/list/apt/lists/*
+
+# Install python requirements
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Upgrade package managers and install your project requirements
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+# Run Crawl4AI system installation and setup playwright components
+RUN crawl4ai-setup
+RUN python -m playwright install --with-deps chromium
 
-# Crucial: --with-deps automatically downloads the exact Linux system OS
-# libraries and font frameworks that Playwright needs, skipping manual apt-get.
-RUN playwright install chromium --with-deps
-
-# Copy your FastAPI app code into the container
+# Copy application source code
 COPY app.py .
 
-EXPOSE 8000
+# Expose default Render port
+EXPOSE 10000
 
-# Start your web scraper endpoint
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "app.py"]

@@ -1,82 +1,53 @@
 import os
-from fastapi import FastAPI, HTTPException, Security
-from fastapi.security.api_key import APIKeyHeader
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, HttpUrl
-from playwright.async_api import async_playwright
+import asyncio
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+# 1. Import configuration modules to control the browser behavior
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig
 
-app = FastAPI()
+app = FastAPI(title="Crawl4AI Optimized Low-RAM API")
 
-API_KEY = os.environ.get("SCRAPER_SECRET_KEY", "my_fallback_secret_key")
-api_key_header = APIKeyHeader(name="X-Scraper-Key", auto_error=True)
+class CrawlRequest(BaseModel):
+    url: str
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# 2. Configure a lightweight browser profile to prevent memory spikes
+browser_config = BrowserConfig(
+    headless=True,
+    extra_args=[
+        "--disable-gpu", 
+        "--no-sandbox", 
+        "--disable-dev-shm-usage",
+        "--disable-setuid-sandbox"
+    ]
 )
 
-class ScrapeRequest(BaseModel):
-    url: HttpUrl
+# 3. Prevent downloading unnecessary assets like large photos/fonts
+run_config = CrawlerRunConfig(
+    cache_mode=1,  # Enable caching to save memory on duplicate page tracks
+)
 
-# --- GLOBAL PLAYWRIGHT STATE ---
-playwright_manager = None
-global_browser = None
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
-@app.on_event("startup")
-async def startup_event():
-    """Launches Chromium ONCE when the Docker container starts up"""
-    global playwright_manager, global_browser
-    print("🚀 Starting global background browser system...")
-    playwright_manager = await async_playwright().start()
-    global_browser = await playwright_manager.chromium.launch(
-        headless=True,
-        args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"]
-    )
-    print("✅ Global browser is live and idling.")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleans up browser allocation nodes when container goes offline"""
-    if global_browser:
-        await global_browser.close()
-    if playwright_manager:
-        await playwright_manager.stop()
-
-@app.get("/healthz")
-def health_check():
-    """Lightweight endpoint for keep-alive pings"""
-    return {"status": "healthy", "browser_live": global_browser is not None}
-
-@app.post("/api/scrape")
-async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_header)):
-    if api_key != API_KEY:
-        raise HTTPException(status_code=403, detail="Invalid API Key")
-    
-    target_url = str(request.url)
-    
-    # Fast: Open a temporary context tab inside the ALREADY running browser
-    context = await global_browser.new_context(
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        viewport={"width": 1920, "height": 1080}
-    )
-    page = await context.new_page()
-    
+@app.post("/crawl")
+async def crawl_url(payload: CrawlRequest):
     try:
-        # Perform dynamic scraping
-        await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_load_state("networkidle", timeout=30000)
-        
-        raw_html = await page.content()
-        return {"success": True, "target": target_url, "html": raw_html}
-        
+        # Pass the memory-optimized configs into the crawler context
+        async with AsyncWebCrawler(config=browser_config) as crawler:
+            result = await crawler.arun(url=payload.url, config=run_config)
+            
+            if not result.success:
+                raise HTTPException(status_code=500, detail="Crawl failed")
+                
+            return {
+                "success": True,
+                "markdown": result.markdown
+            }
     except Exception as e:
-        return {"success": False, "error": f"Scrape loop aborted: {str(e)}"}
-    finally:
-        # Instantly close only the tab context, leaving the global browser running
-        await context.close()
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("app:app", host="0.0.0.0", port=port)
