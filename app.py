@@ -53,7 +53,9 @@ browser_config = BrowserConfig(
 run_config = CrawlerRunConfig(
     scraping_strategy=WebScrapingStrategy(),
     excluded_tags=["footer", "header", "style", "script"],
-    css_selector=".tableList",
+    # css_selector=".tableList",
+    avoid_ads=True,
+    avoid_css=True,
     wait_until="commit",
     exclude_external_links=True,
     cache_mode=1,
@@ -70,7 +72,6 @@ def health_check():
 @app.post("/crawl", dependencies=[Depends(validate_api_key)])
 async def crawl_url(payload: CrawlRequest):
     try:
-        # Deploy crawler engine using memory optimizations and network interception
         async with AsyncWebCrawler(config=browser_config) as crawler:
             result = await crawler.arun(url=payload.url, config=run_config)
 
