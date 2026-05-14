@@ -1,35 +1,14 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from crawl4ai import (
-    AsyncWebCrawler,
-    BrowserConfig,
-    CrawlerRunConfig,
-    WebScrapingStrategy,
-)
+from pydantic import BaseModel, HttpUrl
+from playwright.async_api import async_playwright
+
+app = FastAPI()
 
 API_KEY = os.environ.get("SCRAPER_SECRET_KEY", "my_fallback_secret_key")
 api_key_header = APIKeyHeader(name="X-Scraper-Key", auto_error=True)
-
-
-async def validate_api_key(api_key_header_value: str = Depends(api_key_header)):
-    """
-    Validates the incoming SCRAPER_SECRET_KEY header against the configured environment secret.
-    """
-    if not api_key_header_value or api_key_header_value != API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API Key"
-        )
-    return api_key_header_value
-
-
-class CrawlRequest(BaseModel):
-    url: str
-
-
-app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,57 +18,65 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-browser_config = BrowserConfig(
-    headless=True,
-    light_mode=True,
-    # extra_args=[
-    #     "--disable-gpu",
-    #     "--no-sandbox",
-    #     "--disable-dev-shm-usage",
-    #     "--blink-settings=imagesEnabled=false",
-    # ],
-    avoid_ads=True,
-    avoid_css=True,
-)
+class ScrapeRequest(BaseModel):
+    url: HttpUrl
 
-run_config = CrawlerRunConfig(
-    # scraping_strategy=WebScrapingStrategy(),
-    excluded_tags=["footer", "header", "style", "script"],
-    # css_selector=".tableList",
-    remove_forms=True,
-    wait_until="domcontentloaded",
-    exclude_external_links=True,
-    cache_mode=1,
-    # prefetch=True,
-)
+# --- GLOBAL PLAYWRIGHT STATE ---
+playwright_manager = None
+global_browser = None
 
+@app.on_event("startup")
+async def startup_event():
+    """Launches Chromium ONCE when the Docker container starts up"""
+    global playwright_manager, global_browser
+    print("🚀 Starting global background browser system...")
+    playwright_manager = await async_playwright().start()
+    global_browser = await playwright_manager.chromium.launch(
+        headless=True,
+        args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"]
+    )
+    print("✅ Global browser is live and idling.")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleans up browser allocation nodes when container goes offline"""
+    if global_browser:
+        await global_browser.close()
+    if playwright_manager:
+        await playwright_manager.stop()
 
 @app.get("/healthz")
 def health_check():
     """Lightweight endpoint for keep-alive pings"""
-    return {"status": "healthy"}
+    return {"status": "healthy", "browser_live": global_browser is not None}
 
-
-@app.post("/crawl", dependencies=[Depends(validate_api_key)])
-async def crawl_url(payload: CrawlRequest):
+@app.post("/api/scrape")
+async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_header)):
+    if api_key != API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid API Key")
+    
+    target_url = str(request.url)
+    
+    # Fast: Open a temporary context tab inside the ALREADY running browser
+    context = await global_browser.new_context(
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        viewport={"width": 1920, "height": 1080}
+    )
+    page = await context.new_page()
+    
     try:
-        async with AsyncWebCrawler(config=browser_config) as crawler:
-            result = await crawler.arun(url=payload.url, config=run_config)
-
-            if not result.success:
-                raise HTTPException(status_code=500, detail="Crawl failure")
-
-            return {
-                "success": True,
-                # "html": result.html,
-                "cleaned": result.cleaned_html
-            }
+        # Perform dynamic scraping
+        await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_load_state("networkidle", timeout=30000)
+        
+        raw_html = await page.content()
+        return {"success": True, "target": target_url, "html": raw_html}
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": False, "error": f"Scrape loop aborted: {str(e)}"}
+    finally:
+        # Instantly close only the tab context, leaving the global browser running
+        await context.close()
 
 
-if __name__ == "__main__":
-    import uvicorn
 
-    port = int(os.environ.get("PORT", 10000))
-    uvicorn.run("app:app", host="0.0.0.0", port=port)
