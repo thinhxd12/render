@@ -9,7 +9,6 @@ from crawl4ai import (
     CrawlerRunConfig,
     WebScrapingStrategy,
 )
-from contextlib import asynccontextmanager
 
 API_KEY = os.environ.get("SCRAPER_SECRET_KEY", "my_fallback_secret_key")
 api_key_header = APIKeyHeader(name="X-Scraper-Key", auto_error=True)
@@ -78,7 +77,12 @@ async def crawl_url(payload: CrawlRequest):
             if not result.success:
                 raise HTTPException(status_code=500, detail="Crawl failure")
 
-            return {"success": True, "html": result.html}
+            return {
+                "success": True,
+                "html": result.html,
+                "results": result,
+                "cleaned": result.cleaned_html
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
