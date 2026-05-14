@@ -53,11 +53,11 @@ browser_config = BrowserConfig(
 )
 
 run_config = CrawlerRunConfig(
-    scraping_strategy=WebScrapingStrategy(),
+    # scraping_strategy=WebScrapingStrategy(),
     excluded_tags=["footer", "header", "style", "script"],
     # css_selector=".tableList",
     remove_forms=True,
-    wait_until="domcontentloaded",
+    # wait_until="domcontentloaded",
     exclude_external_links=True,
     cache_mode=1,
     prefetch=True,
