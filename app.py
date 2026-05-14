@@ -54,9 +54,9 @@ browser_config = BrowserConfig(
 # MATCH FIRECRAWL SPEED: Optimize the execution strategy
 run_config = CrawlerRunConfig(
     # scraping_strategy=WebScrapingStrategy(),
-    excluded_tags=["nav", "footer", "header", "aside", "script", "style"],
-    page_timeout=10000,
-    wait_until="domcontentloaded",
+    excluded_tags=[ "footer", "header", "style"],
+    # page_timeout=10000,
+    # wait_until="domcontentloaded",
     exclude_external_links=True,
     cache_mode=1,
     prefetch=True
