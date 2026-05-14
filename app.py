@@ -42,12 +42,12 @@ app.add_middleware(
 browser_config = BrowserConfig(
     headless=True,
     light_mode=True,
-    extra_args=[
-        "--disable-gpu",
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        "--blink-settings=imagesEnabled=false",
-    ],
+    # extra_args=[
+    #     "--disable-gpu",
+    #     "--no-sandbox",
+    #     "--disable-dev-shm-usage",
+    #     "--blink-settings=imagesEnabled=false",
+    # ],
     avoid_ads=True,
     avoid_css=True,
 )
@@ -57,7 +57,7 @@ run_config = CrawlerRunConfig(
     # excluded_tags=["footer", "header", "style", "script"],
     # css_selector=".tableList",
     # remove_forms=True,
-    # wait_until="domcontentloaded",
+    wait_until="domcontentloaded",
     # exclude_external_links=True,
     cache_mode=1,
     # prefetch=True,
