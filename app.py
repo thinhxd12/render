@@ -25,6 +25,7 @@ global_crawler = None
 # MATCH FIRECRAWL SPEED: Configure the browser infrastructure
 browser_config = BrowserConfig(
     headless=True,
+    light_mode=True, 
     extra_args=[
         "--disable-gpu",
         "--no-sandbox",
@@ -35,6 +36,8 @@ browser_config = BrowserConfig(
 
 # MATCH FIRECRAWL SPEED: Optimize the execution strategy
 run_config = CrawlerRunConfig(
+    page_timeout=10000,
+    magic_mode=False,
     wait_until="commit", 
     exclude_external_links=True,
     cache_mode=1
