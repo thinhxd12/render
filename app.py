@@ -72,6 +72,11 @@ async def shutdown_event():
     if global_crawler:
         await global_crawler.__aexit__(None, None, None)
 
+@app.get("/healthz")
+def health_check():
+    """Lightweight endpoint for keep-alive pings"""
+    return {"status": "healthy", "browser_live": global_browser is not None}
+
 @app.post("/crawl", dependencies=[Depends(validate_api_key)])
 async def crawl_url(payload: CrawlRequest):
     try:
