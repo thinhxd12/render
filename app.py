@@ -55,8 +55,8 @@ browser_config = BrowserConfig(
 run_config = CrawlerRunConfig(
     scraping_strategy=WebScrapingStrategy(),
     excluded_tags=["footer", "header", "style", "script"],
-    # page_timeout=10000,
-    wait_until="domcontentloaded",
+    css_selector='tr[itemtype="http://schema.org/Book"]'  
+    # wait_until="domcontentloaded",
     exclude_external_links=True,
     cache_mode=1,
     prefetch=True
@@ -90,7 +90,8 @@ async def crawl_url(payload: CrawlRequest):
             
         return {
             "success": True,
-            "html": result.html
+            "html": result.html,
+            "results": result.cleaned_html
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
