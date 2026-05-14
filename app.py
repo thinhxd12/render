@@ -76,7 +76,7 @@ async def crawl_url(payload: CrawlRequest):
             
         return {
             "success": True,
-            "markdown": result.markdown
+            "markdown": result.markdown,
             "html": result.html
         }
     except Exception as e:
