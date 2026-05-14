@@ -21,6 +21,48 @@ app.add_middleware(
 class ScrapeRequest(BaseModel):
     url: HttpUrl
 
+# block pages by resource type. e.g. image, stylesheet
+BLOCK_RESOURCE_TYPES = [
+  'beacon',
+  'csp_report',
+  'font',
+  'image',
+  'imageset',
+  'media',
+  'object',
+  'texttrack',
+#  we can even block stylsheets and scripts though it's not recommended:
+# 'stylesheet',
+# 'script',  
+# 'xhr',
+]
+
+def intercept_route(route):
+    """intercept all requests and abort blocked ones"""
+    if route.request.resource_type in BLOCK_RESOURCE_TYPES:
+        print(f'blocking background resource {route.request} blocked type "{route.request.resource_type}"')
+        return route.abort()
+    if any(key in route.request.url for key in BLOCK_RESOURCE_NAMES):
+        print(f"blocking background resource {route.request} blocked name {route.request.url}")
+        return route.abort()
+    return route.continue_()
+
+
+# we can also block popular 3rd party resources like tracking and advertisements.
+BLOCK_RESOURCE_NAMES = [
+  'adzerk',
+  'analytics',
+  'cdn.api.twitter',
+  'doubleclick',
+  'exelator',
+  'facebook',
+  'fontawesome',
+  'google',
+  'google-analytics',
+  'googletagmanager',
+]
+
+
 # --- GLOBAL PLAYWRIGHT STATE ---
 playwright_manager = None
 global_browser = None
@@ -50,7 +92,7 @@ def health_check():
     """Lightweight endpoint for keep-alive pings"""
     return {"status": "healthy", "browser_live": global_browser is not None}
 
-@app.post("/api/scrape")
+@app.post("/crawl")
 async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_header)):
     if api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Invalid API Key")
@@ -62,10 +104,11 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         viewport={"width": 1920, "height": 1080}
     )
+
     page = await context.new_page()
-    
+
     try:
-        # Perform dynamic scraping
+        page.route("**/*", intercept_route)
         await page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
         await page.wait_for_load_state("networkidle", timeout=30000)
         
