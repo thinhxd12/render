@@ -55,7 +55,7 @@ browser_config = BrowserConfig(
 run_config = CrawlerRunConfig(
     scraping_strategy=WebScrapingStrategy(),
     excluded_tags=["footer", "header", "style", "script"],
-    css_selector='tr[itemtype="http://schema.org/Book"]',  
+    css_selector='.tableList',  
     # wait_until="domcontentloaded",
     exclude_external_links=True,
     cache_mode=1,
