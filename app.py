@@ -40,10 +40,8 @@ BLOCK_RESOURCE_TYPES = [
 def intercept_route(route):
     """intercept all requests and abort blocked ones"""
     if route.request.resource_type in BLOCK_RESOURCE_TYPES:
-        print(f'blocking background resource {route.request} blocked type "{route.request.resource_type}"')
         return route.abort()
     if any(key in route.request.url for key in BLOCK_RESOURCE_NAMES):
-        print(f"blocking background resource {route.request} blocked name {route.request.url}")
         return route.abort()
     return route.continue_()
 
@@ -106,7 +104,7 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
     )
 
     page = await context.new_page()
-    page.route("**/*", intercept_route)
+    await page.route("**/*", intercept_route)
 
     try:
       # 1. Set up the listener for the main document request returning a 200 status
