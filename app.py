@@ -48,15 +48,16 @@ browser_config = BrowserConfig(
         "--disable-dev-shm-usage",
         "--blink-settings=imagesEnabled=false",
     ],
+    avoid_ads=True,
+    avoid_css=True,
 )
 
 run_config = CrawlerRunConfig(
     scraping_strategy=WebScrapingStrategy(),
     excluded_tags=["footer", "header", "style", "script"],
     # css_selector=".tableList",
-    avoid_ads=True,
-    avoid_css=True,
-    wait_until="commit",
+    remove_forms=True,
+    wait_until="domcontentloaded",
     exclude_external_links=True,
     cache_mode=1,
     prefetch=True,
