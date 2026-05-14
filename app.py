@@ -25,14 +25,15 @@ browser_config = BrowserConfig(
     avoid_css=True, 
     memory_saving_mode=True,          # Aggressive cache/V8 heap flags
     max_pages_before_recycle=100,     # Auto-restart browser after N pages
-    exclude_all_images=True,
     extra_args=[
         "--disable-gpu",
         "--no-sandbox",
         "--disable-dev-shm-usage",
         "--disable-setuid-sandbox",
         "--blink-settings=imagesEnabled=false" # Chromium level image disabling
-    ]
+    ],
+    exclude_external_links=True,    # Remove external links
+    remove_overlay_elements=True
 )
 
 run_config = CrawlerRunConfig(
