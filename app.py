@@ -21,8 +21,8 @@ class CrawlRequest(BaseModel):
 
 browser_config = BrowserConfig(
     headless=True,
-    avoid_ads=True,
-    avoid_css=True, 
+    # avoid_ads=True,
+    # avoid_css=True, 
     # memory_saving_mode=True,          # Aggressive cache/V8 heap flags
     # max_pages_before_recycle=100,     # Auto-restart browser after N pages
     # extra_args=[
