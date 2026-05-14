@@ -4,8 +4,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
-from crawl4ai.extraction_strategy import LXMLWebScrapingStrategy
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode, WebScrapingStrategy
 
 app = FastAPI(title="Crawl4AI Optimized Low-RAM API")
 
@@ -36,7 +35,7 @@ browser_config = BrowserConfig(
 run_config = CrawlerRunConfig(
     cache_mode=1, # Re-use page layout states if duplicate crawls occur
     wait_until="commit", # "commit" stops tracking as soon as HTML is delivered (faster than "networkidle")
-    scraping_strategy=LXMLWebScrapingStrategy(),
+    scraping_strategy=WebScrapingStrategy()
 )
 
 @app.get("/health")
