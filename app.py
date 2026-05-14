@@ -87,8 +87,7 @@ def health_check():
     """Lightweight endpoint for keep-alive pings"""
     return {"status": "healthy"}
 
-
-@app.post("/crawlbook", dependencies=[Depends(validate_api_key)])
+@app.post("/crawl", dependencies=[Depends(validate_api_key)])
 async def crawl_url(payload: CrawlRequest):
     try:
         crawler = state["crawler"]
