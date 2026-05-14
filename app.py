@@ -3,7 +3,7 @@ import asyncio
 from fastapi import FastAPI, HTTPException, Security, Depends, status
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode, WebScrapingStrategy
 
 app = FastAPI(title="Crawl4AI Optimized Low-RAM API")
@@ -23,7 +23,7 @@ async def validate_api_key(api_key_header_value: str = Depends(api_key_header)):
     return api_key_header_value
 
 class CrawlRequest(BaseModel):
-    url: str
+    url: HttpUrl
 
 app.add_middleware(
     CORSMiddleware,
@@ -77,7 +77,7 @@ async def shutdown_event():
 @app.get("/healthz")
 def health_check():
     """Lightweight endpoint for keep-alive pings"""
-    return {"status": "healthy", "browser_live": global_browser is not None}
+    return {"status": "healthy"}
 
 @app.post("/crawl", dependencies=[Depends(validate_api_key)])
 async def crawl_url(payload: CrawlRequest):
