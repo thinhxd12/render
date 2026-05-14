@@ -27,51 +27,10 @@ async def validate_api_key(api_key_header_value: str = Depends(api_key_header)):
 
 
 class CrawlRequest(BaseModel):
-    url: str 
-
-# 1. Define global state storage
-state = {}
-
-# 2. Modern Lifespan Event Handler
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """
-    Manages the persistent lifecycle of the Crawl4AI browser pool.
-    Replaces the deprecated @app.on_event hooks.
-    """
-    browser_config = BrowserConfig(
-        headless=True,
-        light_mode=True,
-        extra_args=[
-            "--disable-gpu",
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--blink-settings=imagesEnabled=false",  # Stops the browser from requesting images
-        ],
-    )
-
-    crawler = AsyncWebCrawler(config=browser_config)
-    await crawler.__aenter__()
-
-    # Store the running instance in the state dictionary
-    state["crawler"] = crawler
-    state["run_config"] = CrawlerRunConfig(
-        scraping_strategy=WebScrapingStrategy(),
-        excluded_tags=["footer", "header", "style", "script"],
-        css_selector=".tableList",
-        wait_until="commit",
-        exclude_external_links=True,
-        cache_mode=1,
-        prefetch=True,
-    )
-
-    yield  # The FastAPI server runs and handles traffic while frozen here
-
-    if "crawler" in state:
-        await state["crawler"].__aexit__(None, None, None)
+    url: str
 
 
-app = FastAPI(title="Modern Crawl4AI API", lifespan=lifespan)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -81,24 +40,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+browser_config = BrowserConfig(
+    headless=True,
+    light_mode=True,
+    extra_args=[
+        "--disable-gpu",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--blink-settings=imagesEnabled=false",
+    ],
+)
+
+run_config = CrawlerRunConfig(
+    scraping_strategy=WebScrapingStrategy(),
+    excluded_tags=["footer", "header", "style", "script"],
+    css_selector=".tableList",
+    wait_until="commit",
+    exclude_external_links=True,
+    cache_mode=1,
+    prefetch=True,
+)
+
+
 @app.get("/healthz")
 def health_check():
     """Lightweight endpoint for keep-alive pings"""
     return {"status": "healthy"}
 
+
 @app.post("/crawl", dependencies=[Depends(validate_api_key)])
 async def crawl_url(payload: CrawlRequest):
     try:
-        crawler = state["crawler"]
-        run_config = state["run_config"]
-        result = await crawler.arun(url=payload.url, config=run_config)
+        # Deploy crawler engine using memory optimizations and network interception
+        async with AsyncWebCrawler(config=browser_config) as crawler:
+            result = await crawler.arun(url=payload.url, config=run_config)
 
-        if not result.success:
-            raise HTTPException(
-                status_code=500, detail="Crawl operation timed out or failed"
-            )
+            if not result.success:
+                raise HTTPException(status_code=500, detail="Crawl failure")
 
-        return {"success": True, "html": result.html, "results": result}
+            return {"success": True, "html": result.html}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
