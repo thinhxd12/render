@@ -108,12 +108,19 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
     page = await context.new_page()
 
     try:
-        page.route("**/*", intercept_route)
-        await page.goto(target_url, wait_until="commit", timeout=30000)
-        # await page.wait_for_load_state("load", timeout=30000)
-        await page.wait_for_selector(".tableList", timeout=30000)
+      # 1. Set up the listener for the main document request returning a 200 status
+        async with page.expect_response(
+            lambda response: response.url == target_url and response.status == 200
+        ) as response_info:
+            
+            # 2. Trigger the navigation (use "commit" so it doesn't block itself)
+            await page.goto(target_url, wait_until="commit")
         
-        raw_html = await page.content()
+        # 3. Resolve the response target
+        response = await response_info.value
+        
+        # 4. Extract the exact raw HTML sent by the server
+        raw_html = await response.text()
         return {"success": True, "target": target_url, "html": raw_html}
         
     except Exception as e:
