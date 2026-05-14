@@ -23,21 +23,21 @@ browser_config = BrowserConfig(
     headless=True,
     avoid_ads=True,
     avoid_css=True, 
-    memory_saving_mode=True,          # Aggressive cache/V8 heap flags
-    max_pages_before_recycle=100,     # Auto-restart browser after N pages
-    extra_args=[
-        "--disable-gpu",
-        "--no-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-setuid-sandbox",
-        "--blink-settings=imagesEnabled=false" # Chromium level image disabling
-    ]
+    # memory_saving_mode=True,          # Aggressive cache/V8 heap flags
+    # max_pages_before_recycle=100,     # Auto-restart browser after N pages
+    # extra_args=[
+    #     "--disable-gpu",
+    #     "--no-sandbox",
+    #     "--disable-dev-shm-usage",
+    #     "--disable-setuid-sandbox",
+    #     "--blink-settings=imagesEnabled=false" # Chromium level image disabling
+    # ]
 )
 
 run_config = CrawlerRunConfig(
     cache_mode=1, # Re-use page layout states if duplicate crawls occur
-    wait_until="commit", # "commit" stops tracking as soon as HTML is delivered (faster than "networkidle")
-    scraping_strategy=WebScrapingStrategy()
+    # wait_until="commit", # "commit" stops tracking as soon as HTML is delivered (faster than "networkidle")
+    # scraping_strategy=WebScrapingStrategy()
 )
 
 @app.get("/health")
