@@ -106,6 +106,7 @@ async def scrape_data(request: ScrapeRequest, api_key: str = Security(api_key_he
     )
 
     page = await context.new_page()
+    page.route("**/*", intercept_route)
 
     try:
       # 1. Set up the listener for the main document request returning a 200 status
