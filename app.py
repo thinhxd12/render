@@ -25,9 +25,6 @@ global_crawler = None
 # MATCH FIRECRAWL SPEED: Configure the browser infrastructure
 browser_config = BrowserConfig(
     headless=True,
-    # OPTION A: If you have a proxy provider (Smartproxy, Oxylabs, Bright Data), add it here.
-    # This prevents Render data-center IPs from being throttled by Cloudflare.
-    # proxy="http://username:password@proxy_host:port", 
     extra_args=[
         "--disable-gpu",
         "--no-sandbox",
@@ -38,18 +35,8 @@ browser_config = BrowserConfig(
 
 # MATCH FIRECRAWL SPEED: Optimize the execution strategy
 run_config = CrawlerRunConfig(
-    # 1. Skip JavaScript rendering if you just need content from standard sites
-    # Set to True only if target pages require JS/React/Vue initialization
-    magic_mode=False, 
-    
-    # 2. Firecrawl speed target: Cut the connection as soon as HTML hits the DOM.
-    # "commit" stops execution instantly without waiting for analytics/trackers.
     wait_until="commit", 
-    
-    # 3. Bypass third-party tracking scripts entirely
     exclude_external_links=True,
-    
-    # 4. Use memory cache for repeated layout patterns
     cache_mode=1
 )
 
