@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security.api_key import APIKeyHeader
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from crawl4ai import (
     AsyncWebCrawler,
     BrowserConfig,
@@ -27,7 +27,7 @@ async def validate_api_key(api_key_header_value: str = Depends(api_key_header)):
 
 
 class CrawlRequest(BaseModel):
-    url: HttpUrl
+    url: str 
 
 # 1. Define global state storage
 state = {}
@@ -67,7 +67,6 @@ async def lifespan(app: FastAPI):
 
     yield  # The FastAPI server runs and handles traffic while frozen here
 
-    # [SHUTDOWN]: Safely close browser processes when the container stops
     if "crawler" in state:
         await state["crawler"].__aexit__(None, None, None)
 
