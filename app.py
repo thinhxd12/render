@@ -58,7 +58,7 @@ run_config = CrawlerRunConfig(
     # css_selector=".tableList",
     remove_forms=True,
     wait_until="domcontentloaded",
-    # exclude_external_links=True,
+    exclude_external_links=True,
     cache_mode=1,
     # prefetch=True,
 )
@@ -81,7 +81,7 @@ async def crawl_url(payload: CrawlRequest):
 
             return {
                 "success": True,
-                "html": result.html,
+                # "html": result.html,
                 "cleaned": result.cleaned_html
             }
     except Exception as e:
